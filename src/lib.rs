@@ -10,12 +10,6 @@ mod types;
 
 use state::FlexState;
 
-#[derive(Debug, thiserror::Error)]
-enum OpenError {
-	#[error("Failure when prepping NVFlex {0}")]
-	FlexInit(#[from] state::InitError),
-}
-
 static STATE: AtomicPtr<FlexState> = AtomicPtr::new(std::ptr::null_mut());
 
 #[lua_function]
@@ -23,7 +17,7 @@ fn get(l: LuaState) -> i32 {
 	let state = STATE.load(Ordering::Relaxed);
 
 	if let Some(state) = unsafe { state.as_ref() } {
-		match unsafe { state.particles.get( state.solver ) } {
+		match unsafe { state.particles.get(state.solver) } {
 			Some(data) => printgm!(l, "{:#?}", data),
 			None => printgm!(l, "Couldn't get data."),
 		}
@@ -102,9 +96,21 @@ fn tick(_l: LuaState) -> i32 {
 	0
 }
 
-fn open(l: LuaState) -> Result<(), OpenError> {
-	let mut flex_state = Box::new(FlexState::new());
-	flex_state.init()?;
+// Returns ref id
+#[lua_function]
+fn get_state(l: LuaState) -> i32 {
+	let a = STATE.load(Ordering::SeqCst);
+	printgm!(l, "{:?}", unsafe { a.as_ref() });
+	0
+}
+
+#[gmod_open]
+fn main(l: LuaState) -> i32 {
+	let flex_state = unsafe {
+		let mut flex = Box::new(FlexState::new());
+		flex.init();
+		flex
+	};
 
 	let flex_ptr = Box::into_raw(flex_state);
 	STATE.store(flex_ptr, Ordering::Relaxed);
@@ -129,28 +135,6 @@ fn open(l: LuaState) -> Result<(), OpenError> {
 	lua_call(l, 3, 0);
 
 	luaL_register(l, cstr!("flex"), r.as_ptr());
-
-	Ok(())
-}
-
-// Returns ref id
-#[lua_function]
-fn get_state(l: LuaState) -> i32 {
-	let a = STATE.load(Ordering::SeqCst);
-	printgm!(l, "{:?}", unsafe { a.as_ref() });
-	0
-}
-
-#[gmod_open]
-fn main(l: LuaState) -> i32 {
-	match open(l) {
-		Err(why) => {
-			luaL_error(l, cstr!("Failed to initialize NVFlex: %s"), why);
-		}
-		Ok(_) => {
-			printgm!(l, "Started nvflex!");
-		}
-	}
 
 	0
 }

@@ -6,105 +6,69 @@ use crate::{
 	types::{Quat, Vector3, Vector4},
 };
 
-use super::FlexState;
+use crate::FlexState;
 
 #[derive(derivative::Derivative)]
 #[derivative(Debug)]
-pub struct GeometryState {
+pub struct ShapeState {
 	#[derivative(Debug = "ignore")]
 	shapes: Vec<NvFlexCollisionGeometry>,
 	count: i32,
 	has_changes: bool,
 
 	pub buffer: *mut NvFlexBuffer,
-
-	pub positions: *mut NvFlexBuffer, // Vec<Vec4>
-	pub rotations: *mut NvFlexBuffer, // Vec<Quat>
-
+	pub positions: *mut NvFlexBuffer,          // Vec<Vec4>
+	pub rotations: *mut NvFlexBuffer,          // Vec<Quat>
 	pub previous_positions: *mut NvFlexBuffer, // Vec<Vec4>
 	pub previous_rotations: *mut NvFlexBuffer, // Vec<Quat>
-
-	pub flags: *mut NvFlexBuffer, // Vec<i32>
+	pub flags: *mut NvFlexBuffer,              // Vec<i32>
 }
 
-impl Default for GeometryState {
-	fn default() -> Self {
-		Self {
-			shapes: vec![],
-			count: 0,
-			has_changes: true,
-
-			buffer: std::ptr::null_mut(),
-
-			positions: std::ptr::null_mut(),
-			rotations: std::ptr::null_mut(),
-
-			previous_positions: std::ptr::null_mut(),
-			previous_rotations: std::ptr::null_mut(),
-			flags: std::ptr::null_mut(),
-		}
-	}
-}
-
-impl GeometryState {
+impl ShapeState {
 	/// Allocates buffers used by the geometry state
 	/// # Safety
 	/// Do not call this function more than once
-	pub unsafe fn alloc(&mut self, flex: *mut NvFlexLibrary) {
-		self.buffer = NvFlexAllocBuffer(
-			flex,
-			config::MAX_SHAPES,
-			size_of::<NvFlexCollisionGeometry>() as i32,
-			eNvFlexBufferHost,
-		);
+	pub unsafe fn new(flex: *mut NvFlexLibrary, max: i32) -> Self {
+		Self {
+			has_changes: false,
 
-		self.positions = NvFlexAllocBuffer(
-			flex,
-			config::MAX_SHAPES,
-			size_of::<Vector4>() as i32,
-			eNvFlexBufferHost,
-		);
+			shapes: vec![],
+			count: 0,
 
-		self.rotations = NvFlexAllocBuffer(
-			flex,
-			config::MAX_SHAPES,
-			size_of::<Quat>() as i32,
-			eNvFlexBufferHost,
-		);
+			buffer: NvFlexAllocBuffer(
+				flex,
+				max,
+				size_of::<NvFlexCollisionGeometry>() as i32,
+				eNvFlexBufferHost,
+			),
 
-		self.previous_positions = NvFlexAllocBuffer(
-			flex,
-			config::MAX_SHAPES,
-			size_of::<Vector4>() as i32,
-			eNvFlexBufferHost,
-		);
+			positions: NvFlexAllocBuffer(flex, max, size_of::<Vector4>() as i32, eNvFlexBufferHost),
 
-		self.previous_rotations = NvFlexAllocBuffer(
-			flex,
-			config::MAX_SHAPES,
-			size_of::<Quat>() as i32,
-			eNvFlexBufferHost,
-		);
+			rotations: NvFlexAllocBuffer(flex, max, size_of::<Quat>() as i32, eNvFlexBufferHost),
 
-		self.flags = NvFlexAllocBuffer(
-			flex,
-			config::MAX_SHAPES,
-			size_of::<i32>() as i32,
-			eNvFlexBufferHost,
-		);
+			previous_positions: NvFlexAllocBuffer(
+				flex,
+				max,
+				size_of::<Vector4>() as i32,
+				eNvFlexBufferHost,
+			),
+
+			previous_rotations: NvFlexAllocBuffer(
+				flex,
+				max,
+				size_of::<Quat>() as i32,
+				eNvFlexBufferHost,
+			),
+
+			flags: NvFlexAllocBuffer(flex, max, size_of::<i32>() as i32, eNvFlexBufferHost),
+		}
 	}
 
 	pub fn get_count(&self) -> i32 {
 		self.count
 	}
 
-	pub fn add_shape(
-		&mut self,
-		shape: NvFlexCollisionGeometry,
-		pos: Vector4,
-		rot: Quat,
-		flag: i32,
-	) {
+	pub fn create(&mut self, shape: NvFlexCollisionGeometry, pos: Vector4, rot: Quat, flag: i32) {
 		self.shapes.push(shape);
 
 		let count = self.count as isize;
@@ -172,7 +136,7 @@ impl GeometryState {
 	}
 }
 
-impl Drop for GeometryState {
+impl Drop for ShapeState {
 	fn drop(&mut self) {
 		unsafe {
 			NvFlexFreeBuffer(self.buffer);

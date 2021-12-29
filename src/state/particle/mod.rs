@@ -1,5 +1,3 @@
-
-
 use nvflex_sys::*;
 
 use crate::{config, types::*};
@@ -21,66 +19,49 @@ pub struct ParticleState {
 	pub active_indices: *mut NvFlexBuffer,
 }
 
-impl Default for ParticleState {
-	fn default() -> Self {
-		Self {
-			has_changes: false,
-
-			count: 0,
-			active: vec![],
-
-			buffer: std::ptr::null_mut(),
-
-			velocities: std::ptr::null_mut(),
-			phases: std::ptr::null_mut(),
-			active_indices: std::ptr::null_mut(),
-		}
-	}
-}
-
 impl ParticleState {
 	/// # Safety
 	/// Do not call this function more than once
-	pub unsafe fn alloc(&mut self, flex: *mut NvFlexLibrary) {
-		self.buffer = NvFlexAllocBuffer(
-			flex,
-			config::MAX_PARTICLES,
-			size_of::<Vector4>() as i32,
-			eNvFlexBufferHost,
-		);
+	pub unsafe fn new(flex: *mut NvFlexLibrary, count: i32) -> Self {
+		Self {
+			has_changes: false,
+			count,
+			active: vec![],
 
-		self.velocities = NvFlexAllocBuffer(
-			flex,
-			config::MAX_PARTICLES,
-			size_of::<Vector3>() as i32,
-			eNvFlexBufferHost,
-		);
+			buffer: NvFlexAllocBuffer(
+				flex,
+				config::MAX_PARTICLES,
+				size_of::<Vector3>() as i32,
+				eNvFlexBufferHost,
+			),
 
-		self.phases = NvFlexAllocBuffer(
-			flex,
-			config::MAX_PARTICLES,
-			size_of::<i32>() as i32,
-			eNvFlexBufferHost,
-		);
+			velocities: NvFlexAllocBuffer(
+				flex,
+				config::MAX_PARTICLES,
+				size_of::<Vector3>() as i32,
+				eNvFlexBufferHost,
+			),
 
-		self.active_indices = NvFlexAllocBuffer(
-			flex,
-			config::MAX_PARTICLES,
-			size_of::<i32>() as i32,
-			eNvFlexBufferHost,
-		);
+			phases: NvFlexAllocBuffer(
+				flex,
+				config::MAX_PARTICLES,
+				size_of::<i32>() as i32,
+				eNvFlexBufferHost,
+			),
+
+			active_indices: NvFlexAllocBuffer(
+				flex,
+				config::MAX_PARTICLES,
+				size_of::<i32>() as i32,
+				eNvFlexBufferHost,
+			),
+		}
 	}
 
 	/// Adds a particle to FleX
 	/// Note the changes won't be applied to flex immediately, you need to call [self.flush]
 	/// Also this is very inefficient since it maps and unmaps every call..
-	pub fn add_particle(
-		&mut self,
-		pos: Vector4,
-		vel: Vector3,
-		phase: i32,
-		active: bool
-	) {
+	pub fn add_particle(&mut self, pos: Vector4, vel: Vector3, phase: i32, active: bool) {
 		let i = self.count;
 		let ind = i as isize;
 		unsafe {
@@ -147,7 +128,7 @@ impl ParticleState {
 		let phases = self.get_phases(solver);
 
 		let mut pvec = vec![];
-		for i in 0 .. self.count as isize {
+		for i in 0..self.count as isize {
 			let particle = particles.offset(i);
 			if particle.is_null() {
 				break;
@@ -192,13 +173,8 @@ impl ParticleState {
 		let phases = NvFlexMap(self.phases, eNvFlexMapWait) as *mut i32;
 		let active_indices = NvFlexMap(self.active_indices, eNvFlexMapWait) as *mut i32;
 
-		let mut factory = factory::ParticleFactory::new(
-			None,
-			particles,
-			velocities,
-			phases,
-			active_indices
-		);
+		let mut factory =
+			factory::ParticleFactory::new(None, particles, velocities, phases, active_indices);
 
 		generator(&mut factory);
 

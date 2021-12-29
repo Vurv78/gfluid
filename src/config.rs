@@ -2,6 +2,7 @@ use nvflex_sys::*;
 
 pub const MAX_PARTICLES: i32 = 10;
 pub const MAX_SHAPES: i32 = 50;
+pub const MAX_TRIANGLES: i32 = 1000;
 
 pub const PARAMS: NvFlexParams = NvFlexParams {
 	numIterations: 3,
