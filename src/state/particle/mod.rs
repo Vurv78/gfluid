@@ -10,6 +10,7 @@ mod factory;
 pub struct ParticleState {
 	has_changes: bool,
 
+	max: i32,
 	count: i32,
 	active: Vec<i32>,
 
@@ -22,36 +23,37 @@ pub struct ParticleState {
 impl ParticleState {
 	/// # Safety
 	/// Do not call this function more than once
-	pub unsafe fn new(flex: *mut NvFlexLibrary, count: i32) -> Self {
+	pub unsafe fn new(flex: *mut NvFlexLibrary, max: i32) -> Self {
 		Self {
 			has_changes: false,
-			count,
+			max: max,
+			count: 0,
 			active: vec![],
 
 			buffer: NvFlexAllocBuffer(
 				flex,
-				config::MAX_PARTICLES,
-				size_of::<Vector3>() as i32,
+				max,
+				size_of::<Vector4>() as i32,
 				eNvFlexBufferHost,
 			),
 
 			velocities: NvFlexAllocBuffer(
 				flex,
-				config::MAX_PARTICLES,
+				max,
 				size_of::<Vector3>() as i32,
 				eNvFlexBufferHost,
 			),
 
 			phases: NvFlexAllocBuffer(
 				flex,
-				config::MAX_PARTICLES,
+				max,
 				size_of::<i32>() as i32,
 				eNvFlexBufferHost,
 			),
 
 			active_indices: NvFlexAllocBuffer(
 				flex,
-				config::MAX_PARTICLES,
+				max,
 				size_of::<i32>() as i32,
 				eNvFlexBufferHost,
 			),
@@ -96,36 +98,14 @@ impl ParticleState {
 		}
 	}
 
-	/// Gets a pointer to the particle buffer
-	/// # Safety
-	/// This function must be followed by a proper release, through self.unmap(), as this calls NvFlexMap
-	pub unsafe fn get_particles(&self, solver: *mut NvFlexSolver) -> *mut Vector4 {
-		NvFlexGetParticles(solver, self.buffer, std::ptr::null());
-		NvFlexMap(self.buffer, eNvFlexMapWait) as *mut Vector4
-	}
-
-	/// Gets a pointer to the particle buffer
-	/// # Safety
-	/// This function must be followed by a proper release, through self.unmap(), as this calls NvFlexMap
-	pub unsafe fn get_velocities(&self, solver: *mut NvFlexSolver) -> *mut Vector3 {
-		NvFlexGetVelocities(solver, self.velocities, std::ptr::null());
-		NvFlexMap(self.velocities, eNvFlexMapWait) as *mut Vector3
-	}
-
-	/// Gets a pointer to the particle buffer
-	/// # Safety
-	/// This function must be followed by a proper release, through self.unmap(), as this calls NvFlexMap
-	pub unsafe fn get_phases(&self, solver: *mut NvFlexSolver) -> *mut i32 {
-		NvFlexGetPhases(solver, self.velocities, std::ptr::null());
-		NvFlexMap(self.velocities, eNvFlexMapWait) as *mut i32
-	}
-
-	/// # Safety
-	/// This function must be followed by a proper release, through self.unmap(), as this calls NvFlexMap
 	pub unsafe fn get(&self, solver: *mut NvFlexSolver) -> Option<Vec<Particle>> {
-		let particles = self.get_particles(solver);
-		let velocities = self.get_velocities(solver);
-		let phases = self.get_phases(solver);
+		NvFlexGetParticles(solver, self.buffer, std::ptr::null());
+		NvFlexGetVelocities(solver, self.velocities, std::ptr::null());
+		NvFlexGetPhases(solver, self.velocities, std::ptr::null());
+
+		let particles = NvFlexMap(self.buffer, eNvFlexMapWait) as *mut Vector4;
+		let velocities = NvFlexMap(self.velocities, eNvFlexMapWait) as *mut Vector3;
+		let phases = NvFlexMap(self.phases, eNvFlexMapWait) as *mut i32;
 
 		let mut pvec = vec![];
 		for i in 0..self.count as isize {
@@ -143,6 +123,10 @@ impl ParticleState {
 				phase: phase.as_ref()?,
 			});
 		}
+
+		NvFlexUnmap(self.buffer);
+		NvFlexUnmap(self.velocities);
+		NvFlexUnmap(self.phases);
 
 		Some(pvec)
 	}

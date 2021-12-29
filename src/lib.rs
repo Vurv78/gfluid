@@ -100,14 +100,19 @@ fn tick(_l: LuaState) -> i32 {
 #[lua_function]
 fn get_state(l: LuaState) -> i32 {
 	let a = STATE.load(Ordering::SeqCst);
-	printgm!(l, "{:?}", unsafe { a.as_ref() });
+	printgm!(l, "{:#?}", unsafe { a.as_ref() });
 	0
 }
 
 #[gmod_open]
 fn main(l: LuaState) -> i32 {
+	unsafe extern "C" fn error_handler(severity: i32, msg: LuaString, file: LuaString, line: i32) {
+		// In the future maybe this can cause a lua ErrorNoHalt?
+		eprintln!("Flex Error!: Severity: {}, Msg: [{}], File: [{}], line: [{}]", severity, rstr!(msg), rstr!(file), line);
+	}
+
 	let flex_state = unsafe {
-		let mut flex = Box::new(FlexState::new());
+		let mut flex = Box::new(FlexState::new(Some(error_handler)));
 		flex.init();
 		flex
 	};
@@ -116,8 +121,11 @@ fn main(l: LuaState) -> i32 {
 	STATE.store(flex_ptr, Ordering::Relaxed);
 
 	let r = reg! [
-		"get_state" => get_state,
+		// function get_particles() -> array<Particle>
 		"get_particles" => get_particles,
+
+		// Debug
+		"get_state" => get_state,
 		"get" => get
 	];
 

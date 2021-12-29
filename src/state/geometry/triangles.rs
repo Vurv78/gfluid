@@ -11,6 +11,7 @@ use crate::FlexState;
 #[derive(derivative::Derivative)]
 #[derivative(Debug)]
 pub struct TriangleState {
+	max: i32,
 	count: i32,
 	has_changes: bool,
 
@@ -19,27 +20,15 @@ pub struct TriangleState {
 	pub uvs: *mut NvFlexBuffer,     // Vec<Vector3>
 }
 
-impl Default for TriangleState {
-	fn default() -> Self {
-		Self {
-			count: 0,
-			has_changes: true,
-
-			buffer: std::ptr::null_mut(),
-			normals: std::ptr::null_mut(),
-			uvs: std::ptr::null_mut(),
-		}
-	}
-}
-
 impl TriangleState {
 	/// Allocates buffers used by the geometry state
 	/// # Safety
 	/// Do not call this function more than once
 	pub unsafe fn new(flex: *mut NvFlexLibrary, max: i32) -> Self {
 		Self {
-			has_changes: false,
+			max,
 			count: 0,
+			has_changes: false,
 
 			buffer: NvFlexAllocBuffer(flex, max, size_of::<i32>() as i32, eNvFlexBufferHost),
 

@@ -13,6 +13,8 @@ use crate::FlexState;
 pub struct ShapeState {
 	#[derivative(Debug = "ignore")]
 	shapes: Vec<NvFlexCollisionGeometry>,
+
+	max: i32, // Todo: Remove this and just create Vec::with_capacity(max)
 	count: i32,
 	has_changes: bool,
 
@@ -33,6 +35,8 @@ impl ShapeState {
 			has_changes: false,
 
 			shapes: vec![],
+
+			max,
 			count: 0,
 
 			buffer: NvFlexAllocBuffer(

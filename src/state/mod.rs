@@ -34,10 +34,10 @@ pub struct FlexState {
 }
 
 impl FlexState {
-	pub unsafe fn new() -> Self {
+	pub unsafe fn new(error_handler: Option<unsafe extern "C" fn(type_: NvFlexErrorSeverity, msg: *const i8, file: *const i8, line: i32)>) -> Self {
 		use std::mem::size_of;
 
-		let flex = NvFlexInit(NV_FLEX_VERSION as i32, None, std::ptr::null_mut());
+		let flex = NvFlexInit(NV_FLEX_VERSION as i32, error_handler, std::ptr::null_mut());
 		if flex.is_null() {
 			// Should never happen. If this does happen this should return a Result<Self, E> again
 			panic!("Failed to create Flex Library");
