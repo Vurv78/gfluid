@@ -1,4 +1,4 @@
-# ``gfluid``
+# ``gfluid`` ![CI](https://github.com/Vurv78/gfluid/actions/workflows/ci.yml/badge.svg)
 > Ripoff of [gwater](https://github.com/Mee12345/GWater-V3), in beautiful Rust
 
 Binary module to create fluids in garrysmod using [Nvidia's FleX library](https://github.com/NVIDIAGameWorks/FleX).

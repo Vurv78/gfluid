@@ -11,7 +11,11 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rglua = "1.0.0"
-nvflex-sys = { version = "0.3.0", git = "https://github.com/Vurv78/nvflex-sys" }
+nvflex-sys = { version = "0.3.0", git = "https://github.com/Vurv78/nvflex-sys", optional = true, default-features = false }
 
 derivative = "2.2.0"
 thiserror = "1.0.30"
+
+[features]
+default = ["nvflex-sys/D3D"]
+ci = ["nvflex-sys"]
