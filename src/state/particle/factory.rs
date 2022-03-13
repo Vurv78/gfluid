@@ -2,7 +2,7 @@ use crate::types::*;
 
 #[derive(Debug)]
 pub struct ParticleFactory {
-	pub nparticles: isize,
+	pub nparticles: usize,
 
 	/// Return values from NvFlexMap(...)
 	buffer: *mut Vector4,
@@ -13,14 +13,14 @@ pub struct ParticleFactory {
 
 impl ParticleFactory {
 	pub fn new(
-		offset: Option<isize>,
+		offset: Option<usize>,
 		buffer: *mut Vector4,
 		velocities: *mut Vector3,
 		phases: *mut i32,
 		indices: *mut i32,
 	) -> Self {
 		Self {
-			nparticles: offset.unwrap_or(0_isize),
+			nparticles: offset.unwrap_or(0),
 
 			buffer,
 			velocities,
@@ -33,14 +33,12 @@ impl ParticleFactory {
 		let index = self.nparticles;
 
 		unsafe {
-			self.buffer.offset(index).write(pos);
-
-			self.velocities.offset(index).write(velocity);
-
-			self.phases.offset(index).write(phase);
+			self.buffer.add(index).write(pos);
+			self.velocities.add(index).write(velocity);
+			self.phases.add(index).write(phase);
 
 			// Assumes particle is active for now.
-			self.active_indices.offset(index).write(index as i32);
+			self.active_indices.add(index).write(index as i32);
 		}
 		self.nparticles += 1;
 	}

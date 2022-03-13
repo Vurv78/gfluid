@@ -10,6 +10,6 @@ pub fn NvFlexMakePhase(group: i32, particle_flags: i32) -> i32 {
 
 #[inline(always)]
 #[allow(non_snake_case)]
-pub fn NvFlexMakeShapeFlags(ty: NvFlexCollisionShapeType, dynamic: bool) -> i32 {
+pub const fn NvFlexMakeShapeFlags(ty: NvFlexCollisionShapeType, dynamic: bool) -> i32 {
 	ty | (if dynamic { eNvFlexShapeFlagDynamic } else { 0 }) | eNvFlexPhaseShapeChannelMask
 }

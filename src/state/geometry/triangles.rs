@@ -24,17 +24,17 @@ impl TriangleState {
 	/// Allocates buffers used by the geometry state
 	/// # Safety
 	/// Do not call this function more than once
-	pub unsafe fn new(flex: *mut NvFlexLibrary, max: i32) -> Self {
-		Self {
-			max,
-			count: 0,
-			has_changes: false,
+	pub fn new(flex: *mut NvFlexLibrary, max: i32) -> Self {
+		unsafe {
+			Self {
+				max,
+				count: 0,
+				has_changes: false,
 
-			buffer: NvFlexAllocBuffer(flex, max, size_of::<i32>() as i32, eNvFlexBufferHost),
-
-			normals: NvFlexAllocBuffer(flex, max, size_of::<Vector3>() as i32, eNvFlexBufferHost),
-
-			uvs: NvFlexAllocBuffer(flex, max, size_of::<Vector3>() as i32, eNvFlexBufferHost),
+				buffer: NvFlexAllocBuffer(flex, max, size_of::<i32>() as i32, eNvFlexBufferHost),
+				normals: NvFlexAllocBuffer(flex, max, size_of::<Vector3>() as i32, eNvFlexBufferHost),
+				uvs: NvFlexAllocBuffer(flex, max, size_of::<Vector3>() as i32, eNvFlexBufferHost),
+			}
 		}
 	}
 
@@ -52,13 +52,15 @@ impl TriangleState {
 
 	/// Pushes shape changes to the FleX state
 	/// # Safety
-	/// Make sure that all of the buffers have been unmapped before calling this.
-	pub unsafe fn flush(&mut self, solver: *mut NvFlexSolver) {
+	/// Same as [ShapeState]
+	pub fn flush(&mut self, solver: *mut NvFlexSolver) {
 		if !self.has_changes {
 			return;
 		}
 
-		NvFlexSetDynamicTriangles(solver, self.buffer, self.normals, self.count);
+		unsafe {
+			NvFlexSetDynamicTriangles(solver, self.buffer, self.normals, self.count);
+		}
 
 		self.has_changes = false;
 	}

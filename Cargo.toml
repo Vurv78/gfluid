@@ -10,7 +10,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-rglua = "1.0.0"
+rglua = "3.0.0-beta"
 nvflex-sys = { version = "0.3.0", git = "https://github.com/Vurv78/nvflex-sys", optional = true, default-features = false }
 
 derivative = "2.2.0"

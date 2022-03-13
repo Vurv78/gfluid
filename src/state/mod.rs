@@ -7,13 +7,20 @@ use crate::{
 	helper::*,
 	types::{Particle, Quat, Vector3, Vector4},
 };
+
 use nvflex_sys::*;
 
 mod geometry;
-use geometry::{ShapeState, TriangleState};
+pub use geometry::*;
 
 mod particle;
 use particle::ParticleState;
+
+#[derive(Debug, thiserror::Error)]
+pub enum CreateError {
+	#[error("Reached maximum number of shapes")]
+	Max
+}
 
 #[derive(Debug)]
 pub struct FlexState {
@@ -72,45 +79,23 @@ impl FlexState {
 	}
 
 	/// Loads default objects / scene
-	pub unsafe fn init(&mut self) {
-		let baux = NvFlexCollisionGeometry {
-			box_: NvFlexBoxGeometry {
-				halfExtents: [50000.0, 50000.0, 5.0],
-			},
-		};
-
-		let flag = NvFlexMakeShapeFlags(eNvFlexShapeBox, false);
-		self.shapes.create(
-			baux,
-			Vector4(0.0, 0.0, 0.0, 0.0),
-			Quat(0.0, 0.0, 0.0, 0.0),
-			flag,
-		);
-
-		self.shapes.create(
-			baux,
-			Vector4(0.0, 0.0, 0.0, 0.0),
-			Quat(0.0, 1.0, 0.0, 0.0),
-			flag,
-		);
-
-		self.shapes.create(
-			baux,
-			Vector4(0.0, 0.0, 0.0, 0.0),
-			Quat(1.0, 0.0, 0.0, 0.0),
-			flag,
-		);
+	pub fn init(&mut self) {
+		let baseplate = Cube::new( config::BASEPLATE, config::BASEPLATE_ROT, config::BASEPLATE_SIZE );
 
 		let fluid = NvFlexMakePhase(0, eNvFlexPhaseSelfCollide | eNvFlexPhaseFluid);
 
-		self.particles.factory(|mut x| {
-			for i in 0..config::MAX_PARTICLES {
-				x.create(
-					Vector4(50.0 * i as f32, 0.0, 5000.0, 2.0),
-					Vector3(0.0, 0.0, -5.0),
-					fluid,
-					true,
-				);
+		self.particles.factory(|mut factory| {
+			for x in 0..5 {
+				for y in 0..5 {
+					for z in 0..5 {
+						factory.create(
+							Vector4(50.0 * x as f32, 50.0 * y as f32, 5000.0 - (z as f32 * 50.0), 2.0),
+							Vector3(0.0, 0.0, -5.0),
+							fluid,
+							true
+						);
+					}
+				}
 			}
 		});
 
@@ -121,14 +106,14 @@ impl FlexState {
 	}
 
 	pub fn tick(&mut self) {
+		let dt = self.instant.elapsed();
+		self.instant = Instant::now();
 		unsafe {
-			let dt = self.instant.elapsed();
-			self.instant = Instant::now();
-
 			NvFlexUpdateSolver(self.solver, dt.as_secs_f32(), 1, false);
 		}
 	}
 
+	#[inline(always)]
 	pub unsafe fn get(&self) -> Option<Vec<Particle>> {
 		self.particles.get(self.solver)
 	}
